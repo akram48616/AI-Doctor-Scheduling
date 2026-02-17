@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# SQLite
+*.sqlite3
+
+# Environment
+.env
+
+# ML model file
+*.pkl
