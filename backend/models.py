@@ -1,20 +1,16 @@
 # backend/models.py
-
 from enum import Enum
+from datetime import datetime
 from sqlalchemy import (
     Column, Integer, String, Text, Date, Time,
-    DateTime, Float, ForeignKey, Boolean,
-    Enum as SAEnum, UniqueConstraint, Index
+    DateTime, Float, ForeignKey, Boolean, Enum as SAEnum,
+    UniqueConstraint
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
 from backend.utils.db import Base
 
-
-# ==========================================================
-# ENUMS
-# ==========================================================
 
 class AppointmentStatus(Enum):
     SCHEDULED = "scheduled"
@@ -23,10 +19,6 @@ class AppointmentStatus(Enum):
     CANCELLED = "cancelled"
     NO_SHOW = "no_show"
 
-
-# ==========================================================
-# HOSPITAL
-# ==========================================================
 
 class Hospital(Base):
     __tablename__ = "hospitals"
@@ -40,25 +32,14 @@ class Hospital(Base):
     phone = Column(String(20))
     email = Column(String(100))
 
-    doctors = relationship(
-        "Doctor",
-        back_populates="hospital",
-        cascade="all, delete-orphan"
-    )
+    doctors = relationship("Doctor", back_populates="hospital", cascade="all, delete")
 
-    appointments = relationship("Appointment", back_populates="hospital")
-
-
-# ==========================================================
-# DOCTOR
-# ==========================================================
 
 class Doctor(Base):
     __tablename__ = "doctors"
 
     id = Column(Integer, primary_key=True)
-    hospital_id = Column(Integer, ForeignKey("hospitals.id"), nullable=True)
-
+    hospital_id = Column(Integer, ForeignKey("hospitals.id"))
     first_name = Column(String(100))
     last_name = Column(String(100))
     specialization = Column(String(100))
@@ -67,19 +48,8 @@ class Doctor(Base):
     consultation_duration = Column(Integer, default=30)
 
     hospital = relationship("Hospital", back_populates="doctors")
+    availabilities = relationship("DoctorAvailability", cascade="all, delete")
 
-    availabilities = relationship(
-        "DoctorAvailability",
-        back_populates="doctor",
-        cascade="all, delete-orphan"
-    )
-
-    appointments = relationship("Appointment", back_populates="doctor")
-
-
-# ==========================================================
-# PATIENT
-# ==========================================================
 
 class Patient(Base):
     __tablename__ = "patients"
@@ -92,66 +62,33 @@ class Patient(Base):
     phone = Column(String(20))
     email = Column(String(100), unique=True)
 
-    appointments = relationship("Appointment", back_populates="patient")
-
-
-# ==========================================================
-# DOCTOR AVAILABILITY
-# ==========================================================
 
 class DoctorAvailability(Base):
     __tablename__ = "doctor_availability"
 
     id = Column(Integer, primary_key=True)
     doctor_id = Column(Integer, ForeignKey("doctors.id"))
-
-    day_of_week = Column(Integer)  # 0 = Monday, 6 = Sunday
+    day_of_week = Column(Integer)
     start_time = Column(Time)
     end_time = Column(Time)
     is_available = Column(Boolean, default=True)
 
-    doctor = relationship("Doctor", back_populates="availabilities")
-
-
-# ==========================================================
-# APPOINTMENT
-# ==========================================================
 
 class Appointment(Base):
     __tablename__ = "appointments"
-
     __table_args__ = (
-        UniqueConstraint(
-            "doctor_id",
-            "appointment_datetime",
-            name="uix_doctor_datetime"
-        ),
-        Index("idx_doctor_id", "doctor_id"),
-        Index("idx_patient_id", "patient_id"),
+        UniqueConstraint("doctor_id", "appointment_datetime", name="uix_doctor_datetime"),
     )
 
     id = Column(Integer, primary_key=True)
-
     patient_id = Column(Integer, ForeignKey("patients.id"))
     doctor_id = Column(Integer, ForeignKey("doctors.id"))
     hospital_id = Column(Integer, ForeignKey("hospitals.id"))
-
-    appointment_datetime = Column(DateTime, nullable=False)
+    appointment_datetime = Column(DateTime)
     duration_minutes = Column(Integer, default=30)
-
-    # SQLite-safe enum storage
-    status = Column(
-        SAEnum(AppointmentStatus, native_enum=False),
-        default=AppointmentStatus.SCHEDULED
-    )
-
+    status = Column(SAEnum(AppointmentStatus), default=AppointmentStatus.SCHEDULED)
     no_show_probability = Column(Float, default=0.0)
     reason = Column(Text, nullable=True)
-
     created_at = Column(DateTime, server_default=func.now())
-    updated_at = Column(DateTime, onupdate=func.now())
-    cancelled_at = Column(DateTime)
-
-    patient = relationship("Patient", back_populates="appointments")
-    doctor = relationship("Doctor", back_populates="appointments")
-    hospital = relationship("Hospital", back_populates="appointments")
+    updated_at = Column(DateTime, onupdate=func.now(), nullable=True)
+    cancelled_at = Column(DateTime, nullable=True)
