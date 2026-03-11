@@ -139,13 +139,13 @@ def test_booking_and_double_book_protection(seed_data, db_session_factory):
     try:
         iso = "2026-03-16T11:00:00"
 
-        res = scheduling.book_appointment(11, 1, 1, iso)
+        res = scheduling.book_appointment(11, 1,  iso)
         assert res["success"]
 
         appt_id = res["appointment_id"]
 
         # Try double booking same slot
-        res2 = scheduling.book_appointment(11, 1, 1, iso)
+        res2 = scheduling.book_appointment(11, 1,  iso)
         assert not res2["success"]
 
         # Cancel appointment
@@ -169,7 +169,7 @@ def test_concurrent_booking_race(seed_data, db_session_factory):
 
         try:
             results.append(
-                scheduling.book_appointment(11, 1, 1, iso)
+                scheduling.book_appointment(11, 1,  iso)
             )
         finally:
             scheduling.get_session = original_get_session

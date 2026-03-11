@@ -9,11 +9,11 @@ from flask import Flask, jsonify
 from flask_cors import CORS
 
 from backend.config import get_config
-from backend.utils.db import init_engine, init_session_factory, create_tables_if_not_exists
-from backend.routes.patient_routes import patient_bp
-from backend.routes.doctor_routes import doctor_bp
-from backend.routes.admin_routes import admin_bp
-from backend.routes.resource_routes import resource_bp
+from backend.utils.db import init_engine, Base
+from backend.routes.patient_routes import bp as patient_bp
+from backend.routes.doctor_routes import bp as doctor_bp
+from backend.routes.admin_routes import bp as admin_bp
+from backend.routes.resource_routes import bp as resource_bp
 
 # Configure logging
 LOG_FILE = os.getenv("APP_LOG_FILE", "app.log")
@@ -43,18 +43,17 @@ def create_app():
         database_url = config.DATABASE_URL
         logger.info("Initializing database engine")
         engine = init_engine(database_url, echo=app.config.get("SQLALCHEMY_ECHO", False))
-        init_session_factory(engine)
-
-        if isinstance(config, type) and config.__name__ == "DevConfig":
-            # If config is a class object (rare), skip; typical get_config returns instance
-            pass
+        
+        # Verify engine was created
+        if engine is None:
+            raise RuntimeError("Failed to initialize database engine")
 
         # If running in development, create tables if not exist
         if app.config.get("ENV", "").lower() == "development":
             logger.info("Development mode: creating tables if not exists")
-            create_tables_if_not_exists()
+            Base.metadata.create_all(bind=engine)
 
-        logger.info("Database initialized")
+        logger.info("Database initialized successfully")
     except Exception as e:
         logger.exception("Failed to initialize database: %s", e)
         raise
