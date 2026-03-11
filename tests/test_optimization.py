@@ -11,8 +11,8 @@ def test_optimize_slots_smoke(seed_data, db_session_factory):
     # Get tomorrow's date from seed data
     tomorrow = (datetime.now() + timedelta(days=1)).date()
     
-    # Call optimize_slots with correct parameters
-    slots = optimize_slots([1], tomorrow)
+    # Call optimize_slots with correct parameters and seed_data session
+    slots = optimize_slots([1], tomorrow, session=seed_data)
     
     # Should return a list (may be empty if no availability)
     assert isinstance(slots, list)

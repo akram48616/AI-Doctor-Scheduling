@@ -1,6 +1,6 @@
 # backend/models.py
 from enum import Enum
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy import (
     Column, Integer, String, Text, Date, Time,
     DateTime, Float, ForeignKey, Boolean, Enum as SAEnum,
@@ -18,6 +18,14 @@ class AppointmentStatus(Enum):
     COMPLETED = "completed"
     CANCELLED = "cancelled"
     NO_SHOW = "no_show"
+
+
+class UserRole(str, Enum):
+    """User roles in the system"""
+    PATIENT = "patient"
+    DOCTOR = "doctor"
+    ADMIN = "admin"
+    RECEPTIONIST = "receptionist"
 
 
 class Hospital(Base):
@@ -92,3 +100,38 @@ class Appointment(Base):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, onupdate=func.now(), nullable=True)
     cancelled_at = Column(DateTime, nullable=True)
+
+
+class User(Base):
+    """
+    User account for authentication.
+    Represents all users (patients, doctors, admin, receptionists).
+    """
+    __tablename__ = "users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, nullable=False, index=True)
+    password_hash = Column(String(255), nullable=False)
+    first_name = Column(String(100), nullable=False)
+    last_name = Column(String(100), nullable=False)
+    role = Column(SAEnum(UserRole), nullable=False, default=UserRole.PATIENT)
+
+    # Account status
+    is_active = Column(Boolean, default=True, nullable=False)
+    last_login = Column(DateTime(timezone=True), nullable=True)
+
+    # Timestamps
+    created_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc),
+        onupdate=lambda: datetime.now(timezone.utc),
+        nullable=False
+    )
+
+    def __repr__(self):
+        return f"<User(id={self.id}, email={self.email}, role={self.role})>"
